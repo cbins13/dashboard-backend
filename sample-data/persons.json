@@ -1,0 +1,42 @@
+[
+    {
+        "name": "Ariana Salazar",
+        "age": 20,
+        "height": 159.6
+    },
+    {
+        "name": "Brandon Lim",
+        "age": 22,
+        "height": 172.3
+    },
+    {
+        "name": "Celine Dela Cruz",
+        "age": 19,
+        "height": 155.8
+    },
+    {
+        "name": "Diego Navarro",
+        "age": 25,
+        "height": 181.4
+    },
+    {
+        "name": "Erika Bautista",
+        "age": 24,
+        "height": 166.2
+    },
+    {
+        "name": "Franco Mendoza",
+        "age": null,
+        "height": 173.9
+    },
+    {
+        "name": "Gianna Robles",
+        "age": 21,
+        "height": null
+    },
+    {
+        "name": "Hector Villanueva",
+        "age": 28,
+        "height": 178.5
+    }
+]

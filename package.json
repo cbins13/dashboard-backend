@@ -6,7 +6,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "migrate": "node scripts/migrate.js",
+    "migrate:undo": "node scripts/migrate.js undo",
+    "migrate:clear": "node scripts/migrate.js undo:all",
+    "seed:persons": "node scripts/seedPersons.js",
+    "seed:persons:reset": "node scripts/seedPersonsReset.js"
   },
   "author": "Christian W. Binay-an",
   "license": "ISC",
