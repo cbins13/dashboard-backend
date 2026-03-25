@@ -1,51 +1,194 @@
-# Oracle Schema Setup Guide
+# dashboard-backend
 
-This guide explains how to configure and use schema targeting in this project.
+A modular REST API backend built with **Express 5**, **Node-oracledb**, and **Sequelize** (Oracle dialect). It provides JWT-based authentication and a versioned API foundation designed to serve a React/Vite SPA.
 
-The current implementation supports two levels:
+## Technology Stack
 
-1. Fixed schema per model (source of truth in `models/modelSchemas.js`)
-2. Runtime session schema switching (`ALTER SESSION SET CURRENT_SCHEMA`) in `db/schemaContext.js`
+| Package | Version | Purpose |
+|---|---|---|
+| `express` | ^5 | HTTP server and routing |
+| `sequelize` | ^6 | ORM with Oracle dialect |
+| `oracledb` | ^6 | Oracle database driver (thin or thick mode) |
+| `jsonwebtoken` | ^9 | JWT access token signing and verification |
+| `bcrypt` | ^6 | Password hashing |
+| `joi` | ^18 | Request body validation |
+| `cors` | ^2 | Cross-origin resource sharing |
+| `helmet` | ^8 | HTTP security headers |
+| `morgan` | ^1 | HTTP request logging |
+| `dotenv` | ^17 | Environment variable loading |
+| `nodemon` | ^3 | Development auto-restart (dev only) |
+
+## API Overview
+
+All routes are versioned under `/api/v1`.
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/auth/login` | Public | Issue a JWT access token |
+| `POST` | `/api/v1/auth/logout` | Public | Acknowledge logout (stateless phase 1) |
+| `GET` | `/api/v1/users` | Bearer JWT | List all users |
+| `POST` | `/api/v1/users` | Bearer JWT | Create a user |
+| `PATCH` | `/api/v1/users/:userId` | Bearer JWT | Update a user |
+| `DELETE` | `/api/v1/users/:userId` | Bearer JWT | Delete a user |
+
+Legacy route (flat structure, still active):
+
+| Method | Path | Description |
+|---|---|---|
+| `GET/POST/PATCH/DELETE` | `/api/persons` | Person CRUD (legacy module) |
 
 ## Quick Start
 
-Use this flow if you want to run everything quickly.
-
-1. Fill in `.env` with valid Oracle credentials and schema values.
-2. Install dependencies:
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-3. Run migrations to create table(s):
+### 2. Configure environment variables
+
+Copy the example below into a `.env` file at the project root and fill in your values:
+
+```env
+# Server
+PORT_DEV=3005
+NODE_ENV=development
+
+# Frontend origin allowed by CORS
+FRONTEND_URL=http://localhost:5173
+
+# JWT
+ACCESS_TOKEN_SECRET=replace_with_a_long_random_secret
+ACCESS_TOKEN_EXPIRES_IN=15m
+
+# Oracle connection
+ORACLE_DB_USER=your_oracle_user
+ORACLE_DB_PASSWORD=your_oracle_password
+ORACLE_DB_CONNECT_STRING=host:port/service
+
+# Oracle Instant Client (only required when ORACLE_CLIENT_MODE=thick)
+ORACLE_CLIENT_MODE=thin
+ORACLE_CLIENT_LIB_DIR=
+
+# Schema config
+ORACLE_DEFAULT_SCHEMA=CHRISTIAN2
+ORACLE_ALLOWED_SCHEMAS=CHRISTIAN2
+ORACLE_TARGET_SCHEMA=CHRISTIAN2
+
+# Connection pool
+ORACLE_POOL_MAX=5
+ORACLE_POOL_MIN=0
+ORACLE_POOL_ACQUIRE=30000
+ORACLE_POOL_IDLE=10000
+
+# Sequelize
+SEQUELIZE_LOGGING=false
+MIGRATIONS_TABLE_NAME=SEQUELIZE_META
+```
+
+Required variables — the server refuses to start if any are missing:
+- `ACCESS_TOKEN_SECRET`
+- `ORACLE_DB_USER`
+- `ORACLE_DB_PASSWORD`
+- `ORACLE_DB_CONNECT_STRING`
+
+### 3. Run database migrations
 
 ```bash
 npm run migrate
 ```
 
-4. Seed sample data:
+Rollback one step:
+
+```bash
+npm run migrate:undo
+```
+
+Clear all migrations:
+
+```bash
+npm run migrate:clear
+```
+
+### 4. Seed sample data (optional)
 
 ```bash
 npm run seed:persons:reset
 ```
 
-5. Start the API:
+### 5. Start the server
+
+Development (auto-restart on file change):
 
 ```bash
 npm run dev
 ```
 
-6. Verify endpoint:
+Production:
 
-```http
-GET http://localhost:3000/api/persons
+```bash
+npm run start
 ```
 
-7. Optional schema-target test (must match model pin for `Person`):
+The server starts on the port defined by `PORT_DEV` (default `3005`).
+
+### 6. Verify
 
 ```http
-GET http://localhost:3000/api/persons?schema=SAMPLE
+POST http://localhost:3005/api/v1/auth/login
+Content-Type: application/json
+
+{ "username": "alice", "password": "secret123" }
+```
+
+## Project Structure
+
+```
+dashboard-backend/
+├── src/                        New modular architecture
+│   ├── server.js               Entry point — db init + app.listen
+│   ├── app.js                  Express app factory
+│   ├── config/                 Environment config, CORS, security headers
+│   ├── routes/                 Root API router (/api/v1)
+│   ├── middleware/             authenticate, validate, errorHandler, notFound
+│   ├── common/                 AppError, asyncHandler, HTTP response helpers
+│   ├── infrastructure/         Oracle/Sequelize DB layer, JWT/bcrypt utilities
+│   ├── modules/                Feature modules (auth, users)
+│   └── models/                 Sequelize model definitions
+├── config/                     Legacy server/routing initializers
+├── db/                         Legacy Oracle connection pool and schema context
+├── models/                     Legacy Sequelize model definitions
+├── routes/                     Legacy Express route handlers
+├── migrations/                 Sequelize migration scripts
+├── scripts/                    CLI helper scripts (migrate, seed)
+└── sample-data/                JSON seed fixtures
+```
+
+Each directory contains its own `README.md` with detailed documentation.
+
+## npm Scripts
+
+| Script | Command | Description |
+|---|---|---|
+| `dev` | `nodemon src/server.js` | Start modular server with auto-restart |
+| `start` | `node src/server.js` | Start modular server |
+| `dev:legacy` | `nodemon server.js` | Start legacy flat server |
+| `start:legacy` | `node server.js` | Start legacy flat server |
+| `migrate` | `node scripts/migrate.js` | Run pending migrations |
+| `migrate:undo` | `node scripts/migrate.js undo` | Rollback last migration |
+| `migrate:clear` | `node scripts/migrate.js undo:all` | Rollback all migrations |
+| `seed:persons` | `node scripts/seedPersons.js` | Seed persons table |
+| `seed:persons:reset` | `node scripts/seedPersonsReset.js` | Clear and reseed persons table |
+
+## Oracle Client Modes
+
+**Thin mode** (default): No Oracle Instant Client installation required. Set `ORACLE_CLIENT_MODE=thin`.
+
+**Thick mode**: Requires Oracle Instant Client to be installed. Set:
+
+```env
+ORACLE_CLIENT_MODE=thick
+ORACLE_CLIENT_LIB_DIR=C:\oracle\instantclient_21_15
 ```
 
 ## 1. Prerequisites

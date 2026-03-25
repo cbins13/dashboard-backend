@@ -2,11 +2,13 @@
   "name": "dashboard-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon server.js",
-    "start": "node server.js",
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "dev:legacy": "nodemon server.js",
+    "start:legacy": "node server.js",
     "migrate": "node scripts/migrate.js",
     "migrate:undo": "node scripts/migrate.js undo",
     "migrate:clear": "node scripts/migrate.js undo:all",
@@ -16,16 +18,19 @@
   "author": "Christian W. Binay-an",
   "license": "ISC",
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "helmet": "^8.1.0",
+    "joi": "^18.1.1",
+    "jsonwebtoken": "^9.0.3",
+    "morgan": "^1.10.1",
     "oracledb": "^6.10.0",
     "sequelize": "^6.37.8"
   },
   "devDependencies": {
-    "morgan": "^1.10.1",
     "nodemon": "^3.1.14"
   }
 }
