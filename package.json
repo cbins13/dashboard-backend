@@ -13,7 +13,9 @@
     "migrate:undo": "node scripts/migrate.js undo",
     "migrate:clear": "node scripts/migrate.js undo:all",
     "seed:persons": "node scripts/seedPersons.js",
-    "seed:persons:reset": "node scripts/seedPersonsReset.js"
+    "seed:persons:reset": "node scripts/seedPersonsReset.js",
+    "seed:users": "node scripts/seedUsers.js",
+    "seed:users:reset": "node scripts/seedUsersReset.js"
   },
   "author": "Christian W. Binay-an",
   "license": "ISC",

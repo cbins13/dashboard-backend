@@ -22,7 +22,14 @@ Express application factory. Exported as `createApp()` — never calls `listen` 
 Responsibilities:
 
 - Enables `trust proxy` for accurate IP logging behind a reverse proxy.
-- Registers global middleware in order: CORS, JSON body parser, URL-encoded body parser, Morgan request logger, Helmet security headers.
+- Registers global middleware in a security-first order:
+	1. Morgan request logger
+	2. API ingress validation (`validateApiIngress`) for method/content-type/payload checks
+	3. Global IP rate limiter (`ipRateLimiter`)
+	4. CORS policy
+	5. Helmet security headers
+	6. JSON parser with policy-driven body size limits
+	7. URL-encoded parser
 - Mounts the root API router at `/api/v1`.
 - Registers the not-found handler and the centralized error handler at the bottom of the stack, after all routes.
 
@@ -30,10 +37,10 @@ Responsibilities:
 
 | Directory | Description |
 |---|---|
-| [`config/`](config/README.md) | Environment config, CORS options, security header options |
-| [`routes/`](routes/README.md) | Root `/api/v1` router — single mount point for all feature routers |
-| [`middleware/`](middleware/README.md) | JWT authentication, request validation, error handling, 404 handler |
+| [`config/`](config/README.md) | Environment config and centralized security policy constants |
+| [`routes/`](routes/README.md) | Root `/api/v1` router with protection boundaries for public/protected routes |
+| [`middleware/`](middleware/README.md) | JWT auth, ingress validation, CSRF, rate limiting, error handling, 404 handler |
 | [`common/`](common/README.md) | Shared utilities: `AppError`, `asyncHandler`, HTTP response helpers |
-| [`infrastructure/`](infrastructure/README.md) | Oracle/Sequelize database layer and JWT/bcrypt security utilities |
-| [`modules/`](modules/README.md) | Feature modules: `auth` and `users` |
+| [`infrastructure/`](infrastructure/README.md) | Oracle/Sequelize database layer and security lifecycle utilities |
+| [`modules/`](modules/README.md) | Feature modules: `auth` (login/refresh/logout) and `users` |
 | [`models/`](models/README.md) | Sequelize model definitions (factory functions) |

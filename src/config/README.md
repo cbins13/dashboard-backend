@@ -23,6 +23,8 @@ The single entry point for environment variable access. Called first in `server.
   frontendUrl,       // FRONTEND_URL (used by CORS)
   jwtAccessSecret,   // ACCESS_TOKEN_SECRET
   jwtAccessExpiresIn,// ACCESS_TOKEN_EXPIRES_IN, default '15m'
+  jwtRefreshSecret,  // REFRESH_TOKEN_SECRET, falls back to ACCESS_TOKEN_SECRET
+  jwtRefreshExpiresIn,// REFRESH_TOKEN_EXPIRES_IN, default '7d'
   oracle: {
     user, password, connectString,
     poolMax, poolMin, poolAcquire, poolIdle,
@@ -45,7 +47,19 @@ CORS policy for the Express application.
 
 ### `security.js`
 
-Helmet options object passed to `helmet()` in `app.js`.
+Centralized backend security policy module.
 
-- Configures `contentSecurityPolicy` with a `script-src` directive allowing `'self'`, `code.jquery.com`, and `cdn.jsdelivr.net`.
-- Imported directly by `app.js` and passed into the `helmet()` call.
+Exports two objects:
+
+- `helmetOptions` — passed into `helmet()` in `app.js`.
+  - Locks down CSP defaults (`defaultSrc`, `scriptSrc`, `objectSrc`, `frameAncestors`).
+  - Disables `crossOriginEmbedderPolicy` for compatibility with mixed clients.
+
+- `securityPolicy` — all runtime security constants, including:
+  - Token policy (`accessTokenTtl`, `refreshTokenTtl`, `issuer`, `audience`, CSRF TTL)
+  - Payload limits (login, users CRUD, default)
+  - Rate-limit thresholds (public, login, protected-user, block windows)
+  - Device-binding thresholds and component weights
+  - Password policy constraints
+
+This keeps security defaults in one place so middleware and services share the same values.

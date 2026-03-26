@@ -24,8 +24,9 @@ All routes are versioned under `/api/v1`.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| `POST` | `/api/v1/auth/login` | Public | Issue a JWT access token |
-| `POST` | `/api/v1/auth/logout` | Public | Acknowledge logout (stateless phase 1) |
+| `POST` | `/api/v1/auth/login` | Public | Issue access + refresh + CSRF tokens and session context |
+| `POST` | `/api/v1/auth/refresh` | Public | Rotate refresh token family and issue fresh token bundle |
+| `POST` | `/api/v1/auth/logout` | Public | Revoke refresh token family |
 | `GET` | `/api/v1/users` | Bearer JWT | List all users |
 | `POST` | `/api/v1/users` | Bearer JWT | Create a user |
 | `PATCH` | `/api/v1/users/:userId` | Bearer JWT | Update a user |
@@ -60,6 +61,10 @@ FRONTEND_URL=http://localhost:5173
 # JWT
 ACCESS_TOKEN_SECRET=replace_with_a_long_random_secret
 ACCESS_TOKEN_EXPIRES_IN=15m
+REFRESH_TOKEN_SECRET=replace_with_another_long_random_secret
+REFRESH_TOKEN_EXPIRES_IN=7d
+JWT_ISSUER=dashboard-backend
+JWT_AUDIENCE=dashboard-api
 
 # Oracle connection
 ORACLE_DB_USER=your_oracle_user
@@ -114,6 +119,7 @@ npm run migrate:clear
 
 ```bash
 npm run seed:persons:reset
+npm run seed:users:reset
 ```
 
 ### 5. Start the server
@@ -179,6 +185,8 @@ Each directory contains its own `README.md` with detailed documentation.
 | `migrate:clear` | `node scripts/migrate.js undo:all` | Rollback all migrations |
 | `seed:persons` | `node scripts/seedPersons.js` | Seed persons table |
 | `seed:persons:reset` | `node scripts/seedPersonsReset.js` | Clear and reseed persons table |
+| `seed:users` | `node scripts/seedUsers.js` | Seed users table |
+| `seed:users:reset` | `node scripts/seedUsersReset.js` | Clear and reseed users table |
 
 ## Oracle Client Modes
 
@@ -372,3 +380,7 @@ Fix: grant needed privileges/synonyms in Oracle.
 ---
 
 If you want, a next step is to add full `Users` model + migration + routes using the same per-model schema enforcement pattern.
+
+### Generation of Document code using VSCODE
+Prompt:
+Review the files I changed and update all relevant README files based on workspace instructions.

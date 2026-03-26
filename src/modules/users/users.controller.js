@@ -11,7 +11,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
 const createUser = asyncHandler(async (req, res) => {
     const user = await usersService.create(req.app.locals.db.sequelize, req.body);
-    success(res, { id: user.id, username: user.username, email: user.email }, 201);
+    success(res, user, 201);
 });
 
 const updateUser = asyncHandler(async (req, res) => {
@@ -20,7 +20,7 @@ const updateUser = asyncHandler(async (req, res) => {
         req.params.userId,
         req.body
     );
-    success(res, { id: user.id, username: user.username, email: user.email });
+    success(res, user);
 });
 
 const deleteUser = asyncHandler(async (req, res) => {

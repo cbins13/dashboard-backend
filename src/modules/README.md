@@ -6,7 +6,7 @@ Feature modules. Each module owns its full vertical slice: router → controller
 
 | Module | Description |
 |---|---|
-| [`auth/`](auth/README.md) | Login, logout, JWT issuance |
+| [`auth/`](auth/README.md) | Login, refresh-token rotation, logout-family revocation |
 | [`users/`](users/README.md) | User CRUD (protected by JWT) |
 
 ## Conventions

@@ -1,0 +1,44 @@
+[
+    {
+        "username": "jsmith",
+        "password": "$2b$12$Iemsl9kSLPrxDabYomPWCufjCOv.cqRb4Vfy3uDXqRUgegQ7h.1Oq",
+        "displayname": "John Smith",
+        "userstatus": "ACTIVE",
+        "archived": 0
+    },
+    {
+        "username": "ajohnson",
+        "password": "$2b$12$Iemsl9kSLPrxDabYomPWCufjCOv.cqRb4Vfy3uDXqRUgegQ7h.1Oq",
+        "displayname": "Alice Johnson",
+        "userstatus": "ACTIVE",
+        "archived": 0
+    },
+    {
+        "username": "bwilliams",
+        "password": "$2b$12$Iemsl9kSLPrxDabYomPWCufjCOv.cqRb4Vfy3uDXqRUgegQ7h.1Oq",
+        "displayname": "Bob Williams",
+        "userstatus": "ACTIVE",
+        "archived": 0
+    },
+    {
+        "username": "cbrown",
+        "password": "$2b$12$Iemsl9kSLPrxDabYomPWCufjCOv.cqRb4Vfy3uDXqRUgegQ7h.1Oq",
+        "displayname": "Carol Brown",
+        "userstatus": "INACTIVE",
+        "archived": 0
+    },
+    {
+        "username": "djones",
+        "password": "$2b$12$Iemsl9kSLPrxDabYomPWCufjCOv.cqRb4Vfy3uDXqRUgegQ7h.1Oq",
+        "displayname": "David Jones",
+        "userstatus": "ACTIVE",
+        "archived": 0
+    },
+    {
+        "username": "emiller",
+        "password": "$2b$12$Iemsl9kSLPrxDabYomPWCufjCOv.cqRb4Vfy3uDXqRUgegQ7h.1Oq",
+        "displayname": "Eve Miller",
+        "userstatus": "ACTIVE",
+        "archived": 0
+    }
+]

@@ -15,4 +15,14 @@ const loginSchema = Joi.object({
         'object.missing': 'Either username or email is required.',
     });
 
-module.exports = { loginSchema };
+const refreshSchema = Joi.object({
+    refreshToken: Joi.string().required(),
+    sessionId: Joi.string().required(),
+});
+
+const logoutSchema = Joi.object({
+    refreshToken: Joi.string().required(),
+    familyId: Joi.string().required(),
+});
+
+module.exports = { loginSchema, refreshSchema, logoutSchema };

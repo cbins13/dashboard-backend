@@ -23,6 +23,8 @@ const config = Object.freeze({
     frontendUrl: process.env.FRONTEND_URL,
     jwtAccessSecret: required('ACCESS_TOKEN_SECRET'),
     jwtAccessExpiresIn: process.env.ACCESS_TOKEN_EXPIRES_IN || '15m',
+    jwtRefreshSecret: process.env.REFRESH_TOKEN_SECRET || required('ACCESS_TOKEN_SECRET'),
+    jwtRefreshExpiresIn: process.env.REFRESH_TOKEN_EXPIRES_IN || '7d',
     oracle: Object.freeze({
         user: required('ORACLE_DB_USER'),
         password: required('ORACLE_DB_PASSWORD'),

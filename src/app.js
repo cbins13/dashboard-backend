@@ -5,10 +5,12 @@ const cors = require('cors');
 const helmet = require('helmet');
 const logger = require('morgan');
 const corsOptions = require('./config/cors');
-const helmetOptions = require('./config/security');
+const { helmetOptions, securityPolicy } = require('./config/security');
 const apiRouter = require('./routes/index');
 const notFound = require('./middleware/notFound');
 const errorHandler = require('./middleware/errorHandler');
+const { validateApiIngress } = require('./middleware/validateRequest');
+const { ipRateLimiter } = require('./middleware/rateLimiter');
 
 const createApp = () => {
     const app = express();
@@ -16,11 +18,13 @@ const createApp = () => {
     app.enable('trust proxy');
 
     // ─── Global middleware ────────────────────────────────────────────────────────
-    app.use(cors(corsOptions));
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
     app.use(logger('combined'));
+    app.use(validateApiIngress);
+    app.use(ipRateLimiter);
+    app.use(cors(corsOptions));
     app.use(helmet(helmetOptions));
+    app.use(express.json({ limit: securityPolicy.payloadLimits.defaultBytes }));
+    app.use(express.urlencoded({ extended: true }));
 
     // ─── API routes ──────────────────────────────────────────────────────────────
     app.use('/api/v1', apiRouter);

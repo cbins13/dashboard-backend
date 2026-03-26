@@ -1,43 +1,155 @@
 'use strict';
 
+const crypto = require('node:crypto');
 const AppError = require('../../common/errors/AppError');
-const { createAccessToken } = require('../../infrastructure/security/jwt');
+const { createAccessToken, createRefreshToken, verifyRefreshToken } = require('../../infrastructure/security/jwt');
 const { verifyPassword } = require('../../infrastructure/security/password');
+const { buildFingerprintParts, fingerprintHash, scoreDeviceSimilarity } = require('../../infrastructure/security/deviceBinding');
+const {
+    createRefreshFamily,
+    rotateRefreshToken,
+    revokeRefreshFamily,
+    getRefreshFamily,
+} = require('../../infrastructure/security/tokenManagement');
+const { generateCsrfToken } = require('../../middleware/csrfProtection');
+const { clearLoginFailures, recordLoginFailure } = require('../../middleware/rateLimiter');
+const { securityPolicy } = require('../../config/security');
 const authRepository = require('./auth.repository');
 
-const login = async (credentials, sequelize) => {
+const login = async (credentials, sequelize, req) => {
     const { username, email, password } = credentials;
 
     const user = username
         ? await authRepository.findUserByUsername(sequelize, username)
         : await authRepository.findUserByEmail(sequelize, email);
 
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const key = req.rateLimitContext?.key || `${ip}:${username || email || 'anonymous'}`;
+
     // Always return identical error for user-not-found and wrong-password
     // to prevent username enumeration.
     if (!user) {
+        recordLoginFailure(ip, key);
         throw new AppError(401, 'Invalid credentials.');
     }
 
-    const passwordMatch = await verifyPassword(password, user.passwordHash);
+    const passwordMatch = await verifyPassword(password, user.password);
 
     if (!passwordMatch) {
+        recordLoginFailure(ip, key);
         throw new AppError(401, 'Invalid credentials.');
     }
 
-    const payload = { userId: user.id, username: user.username };
-    const accessToken = createAccessToken(payload);
+    clearLoginFailures(key);
+
+    const sessionId = crypto.randomUUID();
+    const fingerprintParts = buildFingerprintParts(req);
+    const deviceHash = fingerprintHash(fingerprintParts);
+    const refreshFamily = createRefreshFamily({
+        userId: user.id,
+        sessionId,
+        deviceHash,
+        deviceParts: fingerprintParts,
+    });
+
+    const accessToken = createAccessToken({
+        userId: user.id,
+        username: user.username,
+        sessionId,
+        familyId: refreshFamily.familyId,
+        tokenType: 'access',
+    });
+    const refreshToken = createRefreshToken({
+        userId: user.id,
+        username: user.username,
+        sessionId,
+        familyId: refreshFamily.familyId,
+        tokenId: refreshFamily.tokenId,
+        version: refreshFamily.version,
+        tokenType: 'refresh',
+    });
+    const csrfToken = generateCsrfToken(sessionId);
 
     return {
         accessToken,
+        refreshToken,
+        csrfToken,
+        sessionId,
+        familyId: refreshFamily.familyId,
         user: { id: user.id, username: user.username },
     };
 };
 
-const logout = async (context) => {
-    // Phase 1: stateless logout — the client simply discards the access token.
-    // Revocation hooks (token blacklist, refresh-token table invalidation)
-    // attach here in a future auth-hardening phase without changing the route contract.
+const refresh = async (payload, req) => {
+    const { refreshToken, sessionId } = payload;
+    const decoded = verifyRefreshToken(refreshToken);
+
+    if (decoded.tokenType !== 'refresh' || decoded.sessionId !== sessionId) {
+        throw new AppError(403, 'Refresh token invalid or unacceptable.');
+    }
+
+    const family = getRefreshFamily(decoded.familyId);
+
+    if (!family || family.revoked) {
+        throw new AppError(403, 'Refresh token invalid or unacceptable.');
+    }
+
+    const actualParts = buildFingerprintParts(req);
+    const expectedHash = family.deviceHash;
+    const actualHash = fingerprintHash(actualParts);
+    const score = expectedHash === actualHash ? 100 : scoreDeviceSimilarity(family.deviceParts, actualParts);
+
+    if (score < securityPolicy.deviceBinding.hijackThreshold) {
+        revokeRefreshFamily(decoded.familyId);
+        throw new AppError(403, 'Suspicious session detected.');
+    }
+
+    if (score < securityPolicy.deviceBinding.suspiciousThreshold) {
+        // Current implementation only logs by returning a stricter denial.
+        throw new AppError(403, 'Session verification failed.');
+    }
+
+    const rotation = rotateRefreshToken({
+        familyId: decoded.familyId,
+        tokenId: decoded.tokenId,
+        nextDeviceHash: actualHash,
+        nextDeviceParts: actualParts,
+    });
+
+    if (!rotation.ok) {
+        throw new AppError(403, 'Refresh token replay detected.');
+    }
+
+    const accessToken = createAccessToken({
+        userId: decoded.userId,
+        username: decoded.username,
+        sessionId: decoded.sessionId,
+        familyId: decoded.familyId,
+        tokenType: 'access',
+    });
+
+    const nextRefreshToken = createRefreshToken({
+        userId: decoded.userId,
+        username: decoded.username,
+        sessionId: decoded.sessionId,
+        familyId: decoded.familyId,
+        tokenId: rotation.tokenId,
+        version: rotation.version,
+        tokenType: 'refresh',
+    });
+
+    return {
+        accessToken,
+        refreshToken: nextRefreshToken,
+        csrfToken: generateCsrfToken(decoded.sessionId),
+        sessionId: decoded.sessionId,
+        familyId: decoded.familyId,
+    };
+};
+
+const logout = async (payload) => {
+    revokeRefreshFamily(payload.familyId);
     return { success: true };
 };
 
-module.exports = { login, logout };
+module.exports = { login, refresh, logout };

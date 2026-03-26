@@ -1,31 +1,72 @@
 # src/infrastructure/security/
 
-Cryptographic primitives for JWT token operations and password hashing. These are the **only files** in the codebase that import `jsonwebtoken` or `bcrypt`. All other code calls these utility functions instead of the libraries directly.
+Security infrastructure primitives for token cryptography, token lifecycle state, password hashing, and device/session integrity.
 
 ## Files
 
 ### `jwt.js`
 
-JWT access token creation and verification.
+JWT token creation and verification helpers.
 
 **`createAccessToken(payload)`**
 
-- Signs `payload` with `ACCESS_TOKEN_SECRET` using the HS256 algorithm.
-- Sets `expiresIn` from `ACCESS_TOKEN_EXPIRES_IN` (default `15m`).
+- Signs access payload with `ACCESS_TOKEN_SECRET` using HS256.
+- Sets `expiresIn` from `ACCESS_TOKEN_EXPIRES_IN`.
+- Adds issuer/audience/jti claims.
 - Returns the signed token string.
 
-Typical payload shape:
+**`createRefreshToken(payload)`**
+
+- Signs refresh payload with `REFRESH_TOKEN_SECRET` (or fallback secret).
+- Sets `expiresIn` from `REFRESH_TOKEN_EXPIRES_IN`.
+- Adds issuer/audience/jti claims.
+
+Typical access payload shape:
 
 ```js
-{ userId: 1, username: 'alice' }
+{ userId: 1, username: 'alice', sessionId: '...', familyId: '...' }
 ```
 
 **`verifyAccessToken(token)`**
 
-- Calls `jwt.verify(token, secret)` and returns the decoded payload.
-- If the token has **expired** (`TokenExpiredError`), throws `AppError(403, 'Token expired.')`.
-- If the token is **invalid** for any other reason (`JsonWebTokenError`), throws `AppError(403, 'Token invalid or unacceptable.')`.
-- The 403 (Forbidden) status is used — not 401 — because the token was presented but cannot be accepted.
+- Verifies signature plus issuer/audience/algorithm constraints.
+- Checks access token revocation list by `jti`.
+- Throws operational `AppError(403, ...)` for expired, revoked, or invalid tokens.
+
+**`verifyRefreshToken(token)`**
+
+- Verifies refresh token signature and claims.
+- Throws operational `AppError(403, ...)` for expired or invalid refresh tokens.
+
+---
+
+### `tokenManagement.js`
+
+Refresh token family and revocation state management.
+
+**Responsibilities:**
+
+- Creates refresh token family state on login (`createRefreshFamily`).
+- Rotates refresh token lineage on refresh (`rotateRefreshToken`).
+- Detects replay/reuse when a consumed token is presented again.
+- Revokes entire families on suspicious activity (`revokeRefreshFamily`).
+- Maintains access-token revocation map by `jti` (`revokeAccessTokenJti`, `isAccessTokenRevoked`).
+
+This module is the server-side backbone for refresh token reuse detection.
+
+---
+
+### `deviceBinding.js`
+
+Session/device fingerprint helpers.
+
+**Responsibilities:**
+
+- Builds normalized fingerprint parts from request headers and IP.
+- Produces deterministic fingerprint hashes for storage/comparison.
+- Computes weighted similarity score for anomaly decisions.
+
+Used by the auth refresh flow to identify suspicious device changes.
 
 ---
 

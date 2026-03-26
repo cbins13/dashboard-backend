@@ -6,8 +6,9 @@ const findUserByUsername = async (sequelize, username) => {
 };
 
 const findUserByEmail = async (sequelize, email) => {
-    const { User } = sequelize.models;
-    return User.findOne({ where: { email } });
+    // USERS schema currently authenticates by username only.
+    // Return null for email-based attempts to keep login response semantics generic.
+    return null;
 };
 
 module.exports = { findUserByUsername, findUserByEmail };

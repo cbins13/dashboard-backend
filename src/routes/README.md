@@ -13,17 +13,25 @@ Creates one `express.Router()` and mounts feature routers onto it. `app.js` moun
 | Prefix | Router | Auth middleware applied here |
 |---|---|---|
 | `/auth` | `modules/auth/auth.routes.js` | None (public) |
-| `/users` | `modules/users/users.routes.js` | `authenticate` |
+| `/users` | `modules/users/users.routes.js` | `authenticate`, `userRateLimiter`, `csrfProtection` |
 
 #### Why authenticate is applied here and not inside the users router
 
 The `authenticate` middleware is added at the mount point:
 
 ```js
-router.use('/users', authenticate, usersRouter);
+router.use('/users', authenticate, userRateLimiter, csrfProtection, usersRouter);
 ```
 
-This keeps the `users.routes.js` file stateless about authentication. Any reader scanning `routes/index.js` can see the full protection boundary in one place. The users router can be tested independently without needing to provide a JWT.
+This keeps the `users.routes.js` file stateless about authentication and protection policy.
+
+Any reader scanning `routes/index.js` can see the full protection boundary in one place:
+
+- JWT authentication
+- user-level request throttling
+- CSRF validation/rotation for mutating operations
+
+The users router can be tested independently without directly coupling route definitions to security middleware implementation details.
 
 #### Adding new feature modules
 
