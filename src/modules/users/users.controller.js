@@ -9,6 +9,11 @@ const getUsers = asyncHandler(async (req, res) => {
     success(res, users);
 });
 
+const getUser = asyncHandler(async (req, res) => {
+    const user = await usersService.getById(req.app.locals.db.sequelize, req.params.userId);
+    success(res, user);
+});
+
 const createUser = asyncHandler(async (req, res) => {
     const user = await usersService.create(req.app.locals.db.sequelize, req.body);
     success(res, user, 201);
@@ -28,4 +33,4 @@ const deleteUser = asyncHandler(async (req, res) => {
     res.status(204).end();
 });
 
-module.exports = { getUsers, createUser, updateUser, deleteUser };
+module.exports = { getUsers, getUser, createUser, updateUser, deleteUser };

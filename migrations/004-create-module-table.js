@@ -1,49 +1,42 @@
 const { getModelSchema } = require('../models/modelSchemas');
 
-const getUsersTableReference = () => {
-    return {
-        schema: getModelSchema('Users') || undefined,
-        tableName: 'USERS',
-    };
-};
+const getModuleTableReference = () => ({
+    schema: getModelSchema('Module') || undefined,
+    tableName: 'MODULE',
+});
 
 module.exports = {
-    name: '002-create-users-table',
+    name: '004-create-module-table',
     up: async ({ queryInterface, Sequelize }) => {
-        const { schema } = getUsersTableReference();
+        const { schema } = getModuleTableReference();
 
         await queryInterface.sequelize.query(
-            'CREATE SEQUENCE users_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE'
+            'CREATE SEQUENCE MODULE_SEQ START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE'
         );
 
-        await queryInterface.createTable(getUsersTableReference(), {
+        await queryInterface.createTable(getModuleTableReference(), {
             ID: {
-                type: Sequelize.NUMBER,
+                type: Sequelize.INTEGER,
                 primaryKey: true,
                 allowNull: false,
             },
-            USERNAME: {
-                type: Sequelize.STRING(255),
+            CODE: {
+                type: Sequelize.STRING(100),
                 allowNull: false,
                 unique: true,
             },
-            PASSWORD: {
+            NAME: {
                 type: Sequelize.STRING(255),
                 allowNull: false,
             },
-            DISPLAYNAME: {
+            ROUTE: {
                 type: Sequelize.STRING(255),
-                allowNull: false,
+                allowNull: true,
             },
-            USERSTATUS: {
+            STATUS: {
                 type: Sequelize.STRING(20),
                 allowNull: false,
                 defaultValue: 'ACTIVE',
-            },
-            ARCHIVED: {
-                type: Sequelize.INTEGER,
-                allowNull: false,
-                defaultValue: 0,
             },
             CREATEDON: {
                 type: Sequelize.DATE,
@@ -55,21 +48,21 @@ module.exports = {
             },
         });
 
-        const tableRef = schema ? `${schema}.USERS` : 'USERS';
+        const tableRef = schema ? `${schema}.MODULE` : 'MODULE';
 
         await queryInterface.sequelize.query(`
-            CREATE OR REPLACE TRIGGER trg_users_id
+            CREATE OR REPLACE TRIGGER TRG_MODULE_ID
             BEFORE INSERT ON ${tableRef}
             FOR EACH ROW
             BEGIN
                 IF :NEW.ID IS NULL THEN
-                    :NEW.ID := users_seq.NEXTVAL;
+                    :NEW.ID := MODULE_SEQ.NEXTVAL;
                 END IF;
             END;
         `);
 
         await queryInterface.sequelize.query(`
-            CREATE OR REPLACE TRIGGER trg_users_timestamps
+            CREATE OR REPLACE TRIGGER TRG_MODULE_TS
             BEFORE INSERT OR UPDATE ON ${tableRef}
             FOR EACH ROW
             BEGIN
@@ -84,18 +77,17 @@ module.exports = {
 
         await queryInterface.sequelize.query(`
             ALTER TABLE ${tableRef}
-            ADD CONSTRAINT chk_users_status CHECK (USERSTATUS IN ('ACTIVE', 'INACTIVE'))
+            ADD CONSTRAINT CHK_MODULE_STATUS CHECK (STATUS IN ('ACTIVE', 'INACTIVE'))
         `);
 
-        await queryInterface.sequelize.query(`
-            ALTER TABLE ${tableRef}
-            ADD CONSTRAINT chk_users_archived CHECK (ARCHIVED IN (0, 1))
-        `);
+        await queryInterface.sequelize.query(
+            `INSERT INTO ${tableRef} (CODE, NAME, ROUTE, STATUS, CREATEDON, UPDATEDON) VALUES ('DASHBOARD', 'Dashboard', '/dashboard', 'ACTIVE', SYSTIMESTAMP, SYSTIMESTAMP)`
+        );
     },
     down: async ({ queryInterface }) => {
-        await queryInterface.sequelize.query(`DROP TRIGGER trg_users_timestamps`);
-        await queryInterface.sequelize.query(`DROP TRIGGER trg_users_id`);
-        await queryInterface.dropTable(getUsersTableReference());
-        await queryInterface.sequelize.query(`DROP SEQUENCE users_seq`);
+        await queryInterface.sequelize.query('DROP TRIGGER TRG_MODULE_TS');
+        await queryInterface.sequelize.query('DROP TRIGGER TRG_MODULE_ID');
+        await queryInterface.dropTable(getModuleTableReference());
+        await queryInterface.sequelize.query('DROP SEQUENCE MODULE_SEQ');
     },
 };

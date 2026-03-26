@@ -31,6 +31,7 @@ const createSequelizeInstance = () => {
         dialectOptions: {
             connectString: config.oracle.connectString,
         },
+        quoteIdentifiers: false,
         logging: config.sequelizeLogging ? console.log : false,
         pool: {
             max: config.oracle.poolMax,

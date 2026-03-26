@@ -24,10 +24,15 @@ const resolvePayloadLimit = (req) => {
 
 const validateApiIngress = (req, res, next) => {
     try {
-        const allowedMethods = new Set(['GET', 'POST', 'PATCH', 'DELETE']);
+        const allowedMethods = new Set(['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']);
 
         if (!allowedMethods.has(req.method)) {
             throw new AppError(405, 'Method not allowed.');
+        }
+
+        // Let CORS middleware handle browser preflight requests.
+        if (req.method === 'OPTIONS') {
+            return next();
         }
 
         const hasBody = req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE';

@@ -15,13 +15,11 @@ const loginSchema = Joi.object({
         'object.missing': 'Either username or email is required.',
     });
 
-const refreshSchema = Joi.object({
-    refreshToken: Joi.string().required(),
-    sessionId: Joi.string().required(),
-});
+// refreshToken is now read from the httpOnly cookie; no body fields are required.
+const refreshSchema = Joi.object({});
 
+// refreshToken is now read from the httpOnly cookie; only familyId is needed in the body.
 const logoutSchema = Joi.object({
-    refreshToken: Joi.string().required(),
     familyId: Joi.string().required(),
 });
 

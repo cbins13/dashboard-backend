@@ -10,6 +10,11 @@ const findById = async (sequelize, userId) => {
     return User.findByPk(userId);
 };
 
+const findByUsername = async (sequelize, username) => {
+    const { User } = sequelize.models;
+    return User.findOne({ where: { username } });
+};
+
 const create = async (sequelize, data) => {
     const { User } = sequelize.models;
     return User.create(data);
@@ -29,4 +34,4 @@ const remove = async (sequelize, userId) => {
     return User.destroy({ where: { id: userId } });
 };
 
-module.exports = { findAll, findById, create, update, remove };
+module.exports = { findAll, findById, findByUsername, create, update, remove };

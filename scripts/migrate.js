@@ -2,28 +2,56 @@ require('dotenv').config();
 
 const fs = require('node:fs/promises');
 const path = require('node:path');
-const { DataTypes, Sequelize } = require('sequelize');
+const { Sequelize } = require('sequelize');
 const { getSequelize } = require('../db/connectionPool');
 
 const migrationsDirectory = path.join(__dirname, '..', 'migrations');
 const metadataTableName = process.env.MIGRATIONS_TABLE_NAME || 'SEQUELIZE_META';
 
-const MigrationMeta = (sequelize) =>
-    sequelize.define(
-        'MigrationMeta',
-        {
-            name: {
-                type: DataTypes.STRING(255),
-                primaryKey: true,
-                allowNull: false,
-            },
-        },
-        {
-            tableName: metadataTableName,
-            freezeTableName: true,
-            timestamps: false,
-        }
+// ---------------------------------------------------------------------------
+// Raw-SQL metadata helpers — completely bypasses Sequelize identifier quoting
+// so no ORA-00904 can occur regardless of how the table was originally created.
+// ---------------------------------------------------------------------------
+
+const ensureMetadataTable = async (sequelize) => {
+    await sequelize.query(
+        `BEGIN
+           EXECUTE IMMEDIATE
+             'CREATE TABLE ${metadataTableName} (NAME VARCHAR2(255) NOT NULL, CONSTRAINT PK_${metadataTableName} PRIMARY KEY (NAME))';
+         EXCEPTION
+           WHEN OTHERS THEN
+             IF SQLCODE = -955 THEN
+               -- Table already exists; rename the column if it was created with lowercase quoting
+               BEGIN
+                 EXECUTE IMMEDIATE 'ALTER TABLE ${metadataTableName} RENAME COLUMN "name" TO NAME';
+               EXCEPTION
+                 WHEN OTHERS THEN NULL;
+               END;
+             END IF;
+         END;`
     );
+};
+
+const getAppliedMigrationNames = async (sequelize) => {
+    const [records] = await sequelize.query(
+        `SELECT NAME FROM ${metadataTableName} ORDER BY NAME ASC`
+    );
+    return new Set(records.map((row) => row.NAME));
+};
+
+const recordMigration = async (sequelize, name) => {
+    await sequelize.query(
+        `INSERT INTO ${metadataTableName} (NAME) VALUES (:name)`,
+        { replacements: { name } }
+    );
+};
+
+const deleteMigrationRecord = async (sequelize, name) => {
+    await sequelize.query(
+        `DELETE FROM ${metadataTableName} WHERE NAME = :name`,
+        { replacements: { name } }
+    );
+};
 
 const loadMigrations = async () => {
     const entries = await fs.readdir(migrationsDirectory);
@@ -43,24 +71,10 @@ const loadMigrations = async () => {
         });
 };
 
-const ensureMetadataTable = async (migrationMeta) => {
-    await migrationMeta.sync();
-};
-
-const getAppliedMigrationNames = async (migrationMeta) => {
-    const records = await migrationMeta.findAll({
-        attributes: ['name'],
-        order: [['name', 'ASC']],
-        raw: true,
-    });
-
-    return new Set(records.map((record) => record.name));
-};
-
-const applyMigrations = async (sequelize, migrationMeta) => {
+const applyMigrations = async (sequelize) => {
     const queryInterface = sequelize.getQueryInterface();
     const migrations = await loadMigrations();
-    const appliedMigrationNames = await getAppliedMigrationNames(migrationMeta);
+    const appliedMigrationNames = await getAppliedMigrationNames(sequelize);
 
     for (const migration of migrations) {
         if (appliedMigrationNames.has(migration.name)) {
@@ -69,16 +83,16 @@ const applyMigrations = async (sequelize, migrationMeta) => {
 
         console.log(`Applying migration: ${migration.name}`);
         await migration.up({ queryInterface, Sequelize });
-        await migrationMeta.create({ name: migration.name });
+        await recordMigration(sequelize, migration.name);
     }
 
     console.log('Migrations complete.');
 };
 
-const undoMigration = async (sequelize, migrationMeta) => {
+const undoMigration = async (sequelize) => {
     const queryInterface = sequelize.getQueryInterface();
     const migrations = await loadMigrations();
-    const appliedMigrationNames = await getAppliedMigrationNames(migrationMeta);
+    const appliedMigrationNames = await getAppliedMigrationNames(sequelize);
     const appliedMigrations = migrations.filter((migration) =>
         appliedMigrationNames.has(migration.name)
     );
@@ -91,14 +105,14 @@ const undoMigration = async (sequelize, migrationMeta) => {
 
     console.log(`Reverting migration: ${latestMigration.name}`);
     await latestMigration.down({ queryInterface, Sequelize });
-    await migrationMeta.destroy({ where: { name: latestMigration.name } });
+    await deleteMigrationRecord(sequelize, latestMigration.name);
     console.log('Migration rollback complete.');
 };
 
-const undoAllMigrations = async (sequelize, migrationMeta) => {
+const undoAllMigrations = async (sequelize) => {
     const queryInterface = sequelize.getQueryInterface();
     const migrations = await loadMigrations();
-    const appliedMigrationNames = await getAppliedMigrationNames(migrationMeta);
+    const appliedMigrationNames = await getAppliedMigrationNames(sequelize);
     const appliedMigrations = migrations.filter((migration) =>
         appliedMigrationNames.has(migration.name)
     );
@@ -113,7 +127,7 @@ const undoAllMigrations = async (sequelize, migrationMeta) => {
     for (const migration of migrationsToRevert) {
         console.log(`Reverting migration: ${migration.name}`);
         await migration.down({ queryInterface, Sequelize });
-        await migrationMeta.destroy({ where: { name: migration.name } });
+        await deleteMigrationRecord(sequelize, migration.name);
     }
 
     console.log('All applied migrations were reverted.');
@@ -121,19 +135,18 @@ const undoAllMigrations = async (sequelize, migrationMeta) => {
 
 const run = async () => {
     const sequelize = getSequelize();
-    const migrationMeta = MigrationMeta(sequelize);
     const command = process.argv[2] || 'up';
 
     try {
         await sequelize.authenticate();
-        await ensureMetadataTable(migrationMeta);
+        await ensureMetadataTable(sequelize);
 
         if (command === 'undo') {
-            await undoMigration(sequelize, migrationMeta);
+            await undoMigration(sequelize);
         } else if (command === 'undo:all') {
-            await undoAllMigrations(sequelize, migrationMeta);
+            await undoAllMigrations(sequelize);
         } else {
-            await applyMigrations(sequelize, migrationMeta);
+            await applyMigrations(sequelize);
         }
     } catch (error) {
         console.error('Migration command failed:', error.message);

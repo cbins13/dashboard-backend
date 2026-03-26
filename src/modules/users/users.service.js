@@ -24,6 +24,12 @@ const safeUser = (user) => {
 };
 
 const create = async (sequelize, data) => {
+    const existing = await usersRepository.findByUsername(sequelize, data.username);
+
+    if (existing) {
+        throw new AppError(409, 'Username already exists.');
+    }
+
     const { password, ...rest } = data;
     const hashedPassword = await hashPassword(password);
     const user = await usersRepository.create(sequelize, { ...rest, password: hashedPassword });
@@ -32,6 +38,14 @@ const create = async (sequelize, data) => {
 
 const update = async (sequelize, userId, data) => {
     const updateData = { ...data };
+
+    if (updateData.username) {
+        const existing = await usersRepository.findByUsername(sequelize, updateData.username);
+
+        if (existing && String(existing.id) !== String(userId)) {
+            throw new AppError(409, 'Username already exists.');
+        }
+    }
 
     if (updateData.password) {
         updateData.password = await hashPassword(updateData.password);

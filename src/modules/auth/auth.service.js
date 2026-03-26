@@ -16,6 +16,19 @@ const { clearLoginFailures, recordLoginFailure } = require('../../middleware/rat
 const { securityPolicy } = require('../../config/security');
 const authRepository = require('./auth.repository');
 
+const resolveUserAccess = async (sequelize, userId, fallbackUsername) => {
+    const access = await authRepository.findUserAccessById(sequelize, userId);
+
+    if (!access) {
+        throw new AppError(404, 'User not found.');
+    }
+
+    return {
+        ...access,
+        username: access.username || fallbackUsername,
+    };
+};
+
 const login = async (credentials, sequelize, req) => {
     const { username, email, password } = credentials;
 
@@ -31,6 +44,11 @@ const login = async (credentials, sequelize, req) => {
     if (!user) {
         recordLoginFailure(ip, key);
         throw new AppError(401, 'Invalid credentials.');
+    }
+
+    if (user.userstatus !== 'ACTIVE' || Number(user.archived) === 1) {
+        recordLoginFailure(ip, key);
+        throw new AppError(403, 'User account is inactive.');
     }
 
     const passwordMatch = await verifyPassword(password, user.password);
@@ -70,21 +88,22 @@ const login = async (credentials, sequelize, req) => {
     });
     const csrfToken = generateCsrfToken(sessionId);
 
+    const access = await resolveUserAccess(sequelize, user.id, user.username);
+
     return {
         accessToken,
         refreshToken,
         csrfToken,
         sessionId,
         familyId: refreshFamily.familyId,
-        user: { id: user.id, username: user.username },
+        user: access,
     };
 };
 
-const refresh = async (payload, req) => {
-    const { refreshToken, sessionId } = payload;
+const refresh = async (refreshToken, req, sequelize) => {
     const decoded = verifyRefreshToken(refreshToken);
 
-    if (decoded.tokenType !== 'refresh' || decoded.sessionId !== sessionId) {
+    if (decoded.tokenType !== 'refresh') {
         throw new AppError(403, 'Refresh token invalid or unacceptable.');
     }
 
@@ -138,13 +157,20 @@ const refresh = async (payload, req) => {
         tokenType: 'refresh',
     });
 
+    const access = await resolveUserAccess(sequelize, decoded.userId, decoded.username);
+
     return {
         accessToken,
         refreshToken: nextRefreshToken,
         csrfToken: generateCsrfToken(decoded.sessionId),
         sessionId: decoded.sessionId,
         familyId: decoded.familyId,
+        user: access,
     };
+};
+
+const me = async (sequelize, userId) => {
+    return resolveUserAccess(sequelize, userId);
 };
 
 const logout = async (payload) => {
@@ -152,4 +178,4 @@ const logout = async (payload) => {
     return { success: true };
 };
 
-module.exports = { login, refresh, logout };
+module.exports = { login, refresh, logout, me };

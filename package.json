@@ -15,12 +15,14 @@
     "seed:persons": "node scripts/seedPersons.js",
     "seed:persons:reset": "node scripts/seedPersonsReset.js",
     "seed:users": "node scripts/seedUsers.js",
-    "seed:users:reset": "node scripts/seedUsersReset.js"
+    "seed:users:reset": "node scripts/seedUsersReset.js",
+    "seed:admin": "node scripts/seedAdmin.js"
   },
   "author": "Christian W. Binay-an",
   "license": "ISC",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",

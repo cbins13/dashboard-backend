@@ -39,6 +39,7 @@ const createSequelizeInstance = () => {
 		dialectOptions: {
 			connectString: process.env.ORACLE_DB_CONNECT_STRING,
 		},
+		quoteIdentifiers: false,
 		logging: process.env.SEQUELIZE_LOGGING === 'true' ? console.log : false,
 		pool: {
 			max: parsePoolValue(process.env.ORACLE_POOL_MAX, 5),

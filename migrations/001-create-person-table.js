@@ -11,21 +11,21 @@ module.exports = {
     name: '001-create-person-table',
     up: async ({ queryInterface, Sequelize }) => {
         await queryInterface.createTable(getPersonTableReference(), {
-            id: {
+            ID: {
                 type: Sequelize.INTEGER,
                 primaryKey: true,
                 autoIncrement: true,
                 allowNull: false,
             },
-            name: {
+            NAME: {
                 type: Sequelize.STRING(255),
                 allowNull: false,
             },
-            age: {
+            AGE: {
                 type: Sequelize.INTEGER,
                 allowNull: true,
             },
-            height: {
+            HEIGHT: {
                 type: Sequelize.DECIMAL(5, 2),
                 allowNull: true,
             },

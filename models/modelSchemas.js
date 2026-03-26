@@ -3,6 +3,11 @@ const { resolveSchema } = require('../db/schemaContext');
 const modelSchemas = {
     Person: 'CHRISTIAN2',
     Users: 'CHRISTIAN2',
+    Role: 'CHRISTIAN2',
+    Module: 'CHRISTIAN2',
+    ModuleCategory: 'CHRISTIAN2',
+    UserRole: 'CHRISTIAN2',
+    RoleModule: 'CHRISTIAN2',
 };
 
 const getModelSchema = (modelName) => {
