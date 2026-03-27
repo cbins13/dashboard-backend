@@ -35,7 +35,11 @@ const validateApiIngress = (req, res, next) => {
             return next();
         }
 
-        const hasBody = req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE';
+        const contentLength = parseContentLength(req.headers['content-length']);
+        const isChunked = typeof req.headers['transfer-encoding'] === 'string';
+        const expectsJsonBody =
+            req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE';
+        const hasBody = expectsJsonBody && (contentLength > 0 || isChunked);
 
         if (hasBody) {
             const contentType = req.headers['content-type'] || '';
@@ -45,7 +49,6 @@ const validateApiIngress = (req, res, next) => {
             }
         }
 
-        const contentLength = parseContentLength(req.headers['content-length']);
         const maxBytes = resolvePayloadLimit(req);
 
         if (contentLength > maxBytes) {

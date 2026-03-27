@@ -2,6 +2,7 @@ const { resolveSchema } = require('../db/schemaContext');
 
 const modelSchemas = {
     Person: 'CHRISTIAN2',
+    User: 'CHRISTIAN2',
     Users: 'CHRISTIAN2',
     Role: 'CHRISTIAN2',
     Module: 'CHRISTIAN2',

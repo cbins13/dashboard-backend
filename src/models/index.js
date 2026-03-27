@@ -48,14 +48,14 @@ const initializeModels = (sequelize) => {
         otherKey: 'roleId',
     });
 
-    Module.hasMany(ModuleCategory, {
-        as: 'categories',
-        foreignKey: 'moduleId',
+    ModuleCategory.hasMany(Module, {
+        as: 'modules',
+        foreignKey: 'moduleCategoryId',
     });
 
-    ModuleCategory.belongsTo(Module, {
-        as: 'module',
-        foreignKey: 'moduleId',
+    Module.belongsTo(ModuleCategory, {
+        as: 'moduleCategory',
+        foreignKey: 'moduleCategoryId',
     });
 
     return models;

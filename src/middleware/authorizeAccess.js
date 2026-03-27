@@ -3,7 +3,7 @@
 const AppError = require('../common/errors/AppError');
 const authRepository = require('../modules/auth/auth.repository');
 
-const requireAccess = (moduleCode, categoryCode) => {
+const requireAccessCategory = (categoryCode) => {
     return async (req, res, next) => {
         try {
             const userId = req.auth?.userId;
@@ -18,23 +18,12 @@ const requireAccess = (moduleCode, categoryCode) => {
                 throw new AppError(403, 'Access denied.');
             }
 
-            const targetModule = moduleCode.toUpperCase();
-            const targetCategory = categoryCode ? categoryCode.toUpperCase() : null;
+            const targetCategory = categoryCode.toUpperCase();
 
             const hasAccess = access.roles.some((role) =>
-                role.modules.some((module) => {
-                    if (module.code.toUpperCase() !== targetModule) {
-                        return false;
-                    }
-
-                    if (!targetCategory) {
-                        return true;
-                    }
-
-                    return module.categories.some(
-                        (category) => category.code.toUpperCase() === targetCategory
-                    );
-                })
+                role.categories.some(
+                    (category) => category.code.toUpperCase() === targetCategory
+                )
             );
 
             if (!hasAccess) {
@@ -48,4 +37,4 @@ const requireAccess = (moduleCode, categoryCode) => {
     };
 };
 
-module.exports = { requireAccess };
+module.exports = { requireAccessCategory };

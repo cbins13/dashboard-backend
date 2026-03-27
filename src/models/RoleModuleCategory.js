@@ -2,9 +2,9 @@
 
 const { getModelSchema } = require('../../models/modelSchemas');
 
-const defineRoleModule = (sequelize, DataTypes) => {
-    const RoleModule = sequelize.define(
-        'RoleModule',
+const defineRoleModuleCategory = (sequelize, DataTypes) => {
+    const RoleModuleCategory = sequelize.define(
+        'RoleModuleCategory',
         {
             roleId: {
                 type: DataTypes.INTEGER,
@@ -12,17 +12,11 @@ const defineRoleModule = (sequelize, DataTypes) => {
                 allowNull: false,
                 field: 'ROLE_ID',
             },
-            moduleId: {
+            moduleCategoryId: {
                 type: DataTypes.INTEGER,
                 primaryKey: true,
                 allowNull: false,
-                field: 'MODULE_ID',
-            },
-            ctrl: {
-                type: DataTypes.STRING(20),
-                allowNull: false,
-                defaultValue: 'VIEW',
-                field: 'CTRL',
+                field: 'MODULE_CATEGORY_ID',
             },
             createdon: {
                 type: DataTypes.DATE,
@@ -36,14 +30,14 @@ const defineRoleModule = (sequelize, DataTypes) => {
             },
         },
         {
-            schema: getModelSchema('RoleModule') || undefined,
-            tableName: 'ROLE_MODULE',
+            schema: getModelSchema('RoleModuleCategory') || undefined,
+            tableName: 'ROLE_MODULE_CATEGORY',
             freezeTableName: true,
             timestamps: false,
         }
     );
 
-    return RoleModule;
+    return RoleModuleCategory;
 };
 
-module.exports = defineRoleModule;
+module.exports = defineRoleModuleCategory;

@@ -1,5 +1,12 @@
 'use strict';
 
+const { getModelSchema } = require('../../../models/modelSchemas');
+
+const qualifyTable = (modelName, tableName) => {
+    const schema = getModelSchema(modelName);
+    return schema ? `${schema}.${tableName}` : tableName;
+};
+
 const findUserByUsername = async (sequelize, username) => {
     const { User } = sequelize.models;
     return User.findOne({ where: { username } });
@@ -20,59 +27,61 @@ const buildAccessTree = (user, rows) => {
                 id: row.ROLE_ID,
                 code: row.ROLE_CODE,
                 name: row.ROLE_NAME,
-                modules: [],
-                _modulesById: new Map(),
+                categories: [],
+                _categoriesById: new Map(),
             };
             rolesById.set(row.ROLE_ID, role);
         }
 
-        if (!row.MODULE_ID) {
+        if (!row.MODULE_CATEGORY_ID) {
             continue;
         }
 
-        let module = role._modulesById.get(row.MODULE_ID);
+        let category = role._categoriesById.get(row.MODULE_CATEGORY_ID);
 
-        if (!module) {
-            module = {
-                id: row.MODULE_ID,
-                code: row.MODULE_CODE,
-                name: row.MODULE_NAME,
-                route: row.MODULE_ROUTE,
-                categories: [],
-                _categoriesById: new Map(),
+        if (!category) {
+            category = {
+                id: row.MODULE_CATEGORY_ID,
+                code: row.MODULE_CATEGORY_CODE,
+                name: row.MODULE_CATEGORY_NAME,
+                sortOrder: row.MODULE_CATEGORY_SORT_ORDER,
+                modules: [],
+                _modulesById: new Map(),
             };
-            role._modulesById.set(row.MODULE_ID, module);
-            role.modules.push(module);
+            role._categoriesById.set(row.MODULE_CATEGORY_ID, category);
+            role.categories.push(category);
         }
 
-        if (!row.CATEGORY_ID || module._categoriesById.has(row.CATEGORY_ID)) {
+        if (!row.MODULE_ID || category._modulesById.has(row.MODULE_ID)) {
             continue;
         }
 
-        const category = {
-            id: row.CATEGORY_ID,
-            code: row.CATEGORY_CODE,
-            name: row.CATEGORY_NAME,
-            sortOrder: row.CATEGORY_SORT_ORDER,
+        const module = {
+            id: row.MODULE_ID,
+            code: row.MODULE_CODE,
+            name: row.MODULE_NAME,
+            route: row.MODULE_ROUTE,
         };
 
-        module._categoriesById.set(row.CATEGORY_ID, category);
-        module.categories.push(category);
+        category._modulesById.set(row.MODULE_ID, module);
+        category.modules.push(module);
     }
 
     const roles = Array.from(rolesById.values()).map((role) => ({
         id: role.id,
         code: role.code,
         name: role.name,
-        modules: role.modules.map((module) => ({
-            id: module.id,
-            code: module.code,
-            name: module.name,
-            route: module.route,
-            categories: [...module.categories].sort(
-                (left, right) => (left.sortOrder || 0) - (right.sortOrder || 0)
-            ),
-        })),
+        categories: role.categories
+            .sort((left, right) => (left.sortOrder || 0) - (right.sortOrder || 0))
+            .map((category) => ({
+                id: category.id,
+                code: category.code,
+                name: category.name,
+                sortOrder: category.sortOrder,
+                modules: [...category.modules].sort((left, right) =>
+                    left.name.localeCompare(right.name)
+                ),
+            })),
     }));
 
     return {
@@ -83,9 +92,16 @@ const buildAccessTree = (user, rows) => {
 };
 
 const findUserAccessById = async (sequelize, userId) => {
+    const usersTable = qualifyTable('User', 'USERS');
+    const userRoleTable = qualifyTable('UserRole', 'USER_ROLE');
+    const roleTable = qualifyTable('Role', 'ROLE');
+    const roleModuleTable = qualifyTable('RoleModule', 'ROLE_MODULE');
+    const moduleTable = qualifyTable('Module', 'MODULE');
+    const moduleCategoryTable = qualifyTable('ModuleCategory', 'MODULE_CATEGORY');
+
     const [users] = await sequelize.query(
         `SELECT ID, USERNAME
-         FROM USERS
+         FROM ${usersTable}
          WHERE ID = :userId`,
         { replacements: { userId } }
     );
@@ -101,28 +117,28 @@ const findUserAccessById = async (sequelize, userId) => {
             R.ID AS ROLE_ID,
             R.CODE AS ROLE_CODE,
             R.NAME AS ROLE_NAME,
+            MC.ID AS MODULE_CATEGORY_ID,
+            MC.CODE AS MODULE_CATEGORY_CODE,
+            MC.NAME AS MODULE_CATEGORY_NAME,
+            MC.SORT_ORDER AS MODULE_CATEGORY_SORT_ORDER,
             M.ID AS MODULE_ID,
             M.CODE AS MODULE_CODE,
             M.NAME AS MODULE_NAME,
-            M.ROUTE AS MODULE_ROUTE,
-            MC.ID AS CATEGORY_ID,
-            MC.CODE AS CATEGORY_CODE,
-            MC.NAME AS CATEGORY_NAME,
-            MC.SORT_ORDER AS CATEGORY_SORT_ORDER
-         FROM USER_ROLE UR
-         LEFT JOIN ROLE R
+            M.ROUTE AS MODULE_ROUTE
+         FROM ${userRoleTable} UR
+         LEFT JOIN ${roleTable} R
             ON R.ID = UR.ROLE_ID
            AND R.STATUS = 'ACTIVE'
-         LEFT JOIN ROLE_MODULE RM
+         LEFT JOIN ${roleModuleTable} RM
             ON RM.ROLE_ID = R.ID
-         LEFT JOIN MODULE M
+         LEFT JOIN ${moduleTable} M
             ON M.ID = RM.MODULE_ID
            AND M.STATUS = 'ACTIVE'
-         LEFT JOIN MODULE_CATEGORY MC
-            ON MC.MODULE_ID = M.ID
+         LEFT JOIN ${moduleCategoryTable} MC
+            ON MC.ID = M.MODULE_CATEGORY_ID
            AND MC.STATUS = 'ACTIVE'
          WHERE UR.USER_ID = :userId
-         ORDER BY R.NAME ASC, M.NAME ASC, MC.SORT_ORDER ASC, MC.NAME ASC`,
+         ORDER BY R.NAME ASC, MC.SORT_ORDER ASC, M.NAME ASC`,
         { replacements: { userId } }
     );
 

@@ -74,16 +74,7 @@ const loginRateLimiter = (req, res, next) => {
         const username = (req.body && (req.body.username || req.body.email)) || 'anonymous';
         const key = `${ip}:${username}`;
 
-        if (isBlockedIp(ip)) {
-            throw new AppError(429, 'Too many login attempts. Please try again later.');
-        }
-
-        const bucket = readBucket(loginBuckets, key, securityPolicy.rateLimit.loginWindowMs);
-
-        if (bucket.count >= securityPolicy.rateLimit.loginAttemptsPer15Min) {
-            failWithRetryAfter(bucket, 'Too many login attempts. Please try again in 15 minutes.');
-        }
-
+        // Temporarily disabled: allow login attempts without per-identity throttling.
         req.rateLimitContext = { ip, key };
         next();
     } catch (error) {
@@ -91,18 +82,9 @@ const loginRateLimiter = (req, res, next) => {
     }
 };
 
-const recordLoginFailure = (ip, key) => {
-    const bucket = readBucket(loginBuckets, key, securityPolicy.rateLimit.loginWindowMs);
-    bucket.count += 1;
+const recordLoginFailure = () => {};
 
-    if (bucket.count >= securityPolicy.rateLimit.ipHardBlockViolationsPerHour) {
-        escalateIpBlock(ip);
-    }
-};
-
-const clearLoginFailures = (key) => {
-    loginBuckets.delete(key);
-};
+const clearLoginFailures = () => {};
 
 const userRateLimiter = (req, res, next) => {
     try {

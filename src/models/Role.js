@@ -1,5 +1,7 @@
 'use strict';
 
+const { getModelSchema } = require('../../models/modelSchemas');
+
 const defineRole = (sequelize, DataTypes) => {
     const Role = sequelize.define(
         'Role',
@@ -39,6 +41,7 @@ const defineRole = (sequelize, DataTypes) => {
             },
         },
         {
+            schema: getModelSchema('Role') || undefined,
             tableName: 'ROLE',
             freezeTableName: true,
             timestamps: false,

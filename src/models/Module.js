@@ -1,5 +1,7 @@
 'use strict';
 
+const { getModelSchema } = require('../../models/modelSchemas');
+
 const defineModule = (sequelize, DataTypes) => {
     const Module = sequelize.define(
         'Module',
@@ -26,6 +28,11 @@ const defineModule = (sequelize, DataTypes) => {
                 allowNull: true,
                 field: 'ROUTE',
             },
+            moduleCategoryId: {
+                type: DataTypes.INTEGER,
+                allowNull: true,
+                field: 'MODULE_CATEGORY_ID',
+            },
             status: {
                 type: DataTypes.STRING(20),
                 allowNull: false,
@@ -44,6 +51,7 @@ const defineModule = (sequelize, DataTypes) => {
             },
         },
         {
+            schema: getModelSchema('Module') || undefined,
             tableName: 'MODULE',
             freezeTableName: true,
             timestamps: false,

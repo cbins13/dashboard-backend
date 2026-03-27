@@ -1,6 +1,7 @@
 'use strict';
 
 const asyncHandler = require('../../common/asyncHandler');
+const AppError = require('../../common/errors/AppError');
 const { success } = require('../../common/http/response');
 const authService = require('./auth.service');
 const env = require('../../config/env');
@@ -27,10 +28,34 @@ const refresh = asyncHandler(async (req, res) => {
         return res.status(401).json({ success: false, message: 'No refresh token provided.' });
     }
 
-    const result = await authService.refresh(refreshToken, req, req.app.locals.db.sequelize);
-    const { refreshToken: nextRefreshToken, ...responseData } = result;
-    res.cookie('refreshToken', nextRefreshToken, REFRESH_COOKIE_OPTIONS);
-    success(res, responseData, 200);
+    try {
+        const result = await authService.refresh(refreshToken, req, req.app.locals.db.sequelize);
+        const { refreshToken: nextRefreshToken, ...responseData } = result;
+        res.cookie('refreshToken', nextRefreshToken, REFRESH_COOKIE_OPTIONS);
+        success(res, responseData, 200);
+    } catch (error) {
+        const isRefreshFailure =
+            error instanceof AppError &&
+            error.statusCode === 403;
+
+        if (!isRefreshFailure) {
+            throw error;
+        }
+
+        res.clearCookie('refreshToken', {
+            httpOnly: true,
+            secure: env.nodeEnv === 'production',
+            sameSite: 'strict',
+            path: '/api/v1/auth',
+        });
+
+        return res.status(401).json({
+            success: false,
+            error: 'Unauthorized',
+            message: 'Session cookie is invalid. Please refresh the page and sign in again.',
+            code: 'REFRESH_COOKIE_INVALID',
+        });
+    }
 });
 
 const me = asyncHandler(async (req, res) => {
