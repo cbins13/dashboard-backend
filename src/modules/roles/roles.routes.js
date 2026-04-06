@@ -8,6 +8,7 @@ const {
     createRoleSchema,
     updateRoleSchema,
     assignModuleSchema,
+    syncModulesSchema,
 } = require('./roles.validator');
 
 const router = Router();
@@ -37,6 +38,12 @@ router.delete(
     '/:roleId/modules/:moduleId',
     requireAccessCategory('USER_MANAGEMENT'),
     rolesController.revokeModule
+);
+router.put(
+    '/:roleId/modules',
+    requireAccessCategory('USER_MANAGEMENT'),
+    validate(syncModulesSchema),
+    rolesController.syncModules
 );
 
 module.exports = router;

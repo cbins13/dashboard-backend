@@ -179,6 +179,36 @@ const revokeModule = async (sequelize, roleId, moduleId) => {
     return true;
 };
 
+const syncModules = async (sequelize, roleId, modules) => {
+    const { Role, RoleModule } = sequelize.models;
+    const role = await Role.findByPk(roleId);
+
+    if (!role) {
+        return null;
+    }
+
+    const roleModuleTableRef = qualifyTable('RoleModule', 'ROLE_MODULE');
+
+    await sequelize.transaction(async (t) => {
+        // Remove all existing assignments for the role
+        await RoleModule.destroy({ where: { roleId }, transaction: t });
+
+        // Insert the new assignments
+        for (const entry of modules) {
+            await sequelize.query(
+                `INSERT INTO ${roleModuleTableRef} (ROLE_ID, MODULE_ID, CTRL, CREATEDON, UPDATEDON)
+                 VALUES (:roleId, :moduleId, :ctrl, SYSTIMESTAMP, SYSTIMESTAMP)`,
+                {
+                    replacements: { roleId, moduleId: entry.moduleId, ctrl: entry.ctrl },
+                    transaction: t,
+                }
+            );
+        }
+    });
+
+    return findById(sequelize, roleId);
+};
+
 module.exports = {
     findAll,
     findById,
@@ -188,4 +218,5 @@ module.exports = {
     remove,
     assignModule,
     revokeModule,
+    syncModules,
 };

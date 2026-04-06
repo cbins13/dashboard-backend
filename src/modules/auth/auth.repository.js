@@ -61,6 +61,7 @@ const buildAccessTree = (user, rows) => {
             code: row.MODULE_CODE,
             name: row.MODULE_NAME,
             route: row.MODULE_ROUTE,
+            ctrl: row.CTRL ?? 'VIEW',
         };
 
         category._modulesById.set(row.MODULE_ID, module);
@@ -124,7 +125,8 @@ const findUserAccessById = async (sequelize, userId) => {
             M.ID AS MODULE_ID,
             M.CODE AS MODULE_CODE,
             M.NAME AS MODULE_NAME,
-            M.ROUTE AS MODULE_ROUTE
+            M.ROUTE AS MODULE_ROUTE,
+            RM.CTRL AS CTRL
          FROM ${userRoleTable} UR
          LEFT JOIN ${roleTable} R
             ON R.ID = UR.ROLE_ID

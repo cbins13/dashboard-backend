@@ -32,7 +32,7 @@ const consumeCsrfToken = (sessionId, providedToken) => {
 
 const csrfProtection = (req, res, next) => {
     try {
-        const mutating = new Set(['POST', 'PATCH', 'DELETE']);
+        const mutating = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
         if (!mutating.has(req.method)) {
             return next();

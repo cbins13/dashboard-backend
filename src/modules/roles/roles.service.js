@@ -72,12 +72,14 @@ const create = async (sequelize, data) => {
         throw new AppError(409, 'Role code already exists.');
     }
 
-    const role = await rolesRepository.create(sequelize, data);
+    const now = new Date();
+    const role = await rolesRepository.create(sequelize, { ...data, createdon: now, updatedon: now });
     return safeRole(role);
 };
 
 const update = async (sequelize, roleId, data) => {
-    const role = await rolesRepository.update(sequelize, roleId, data);
+    const updated = { ...data, updatedon: new Date() };
+    const role = await rolesRepository.update(sequelize, roleId, updated);
 
     if (!role) {
         throw new AppError(404, 'Role not found.');
@@ -118,4 +120,14 @@ const revokeModule = async (sequelize, roleId, moduleId) => {
     }
 };
 
-module.exports = { getAll, getById, create, update, remove, assignModule, revokeModule };
+const syncModules = async (sequelize, roleId, modules) => {
+    const role = await rolesRepository.syncModules(sequelize, roleId, modules);
+
+    if (!role) {
+        throw new AppError(404, 'Role not found.');
+    }
+
+    return safeRole(role);
+};
+
+module.exports = { getAll, getById, create, update, remove, assignModule, revokeModule, syncModules };

@@ -3,6 +3,18 @@
 const config = require('../config/env');
 const AppError = require('../common/errors/AppError');
 
+/**
+ * Strip Oracle schema/user names from error messages so they are never
+ * leaked to the client.  Patterns like  SCHEMA_OWNER.TABLE_NAME  or
+ * (SCHEMA_OWNER.CONSTRAINT_NAME) are replaced with the object name only.
+ */
+const sanitizeOracleMessage = (message) => {
+    if (typeof message !== 'string') return message;
+    // Remove schema prefix in parenthetical references: (SCHEMA.CONSTRAINT) → (CONSTRAINT)
+    // and in bare references: SCHEMA.TABLE → TABLE
+    return message.replace(/\b[A-Za-z0-9_#$]+\.([A-Za-z0-9_#$]+)\b/g, '$1');
+};
+
 const resolveProdErrorName = (statusCode) => {
     if (statusCode === 401) return 'Unauthorized';
     return 'RequestFailed';
@@ -27,7 +39,7 @@ const buildOperationalPayload = (err) => {
     return {
         success: false,
         error: err.name || 'AppError',
-        message: err.message,
+        message: sanitizeOracleMessage(err.message),
         code: `ERR_${err.statusCode}`,
         retryAfter: err.retryAfter,
         timestamp: new Date().toISOString(),
@@ -53,8 +65,8 @@ const errorHandler = (err, req, res, next) => {
 
     return res.status(500).json({
         success: false,
-        message: err.message,
-        stack: err.stack,
+        message: sanitizeOracleMessage(err.message),
+        stack: sanitizeOracleMessage(err.stack),
     });
 };
 

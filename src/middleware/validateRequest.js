@@ -24,7 +24,7 @@ const resolvePayloadLimit = (req) => {
 
 const validateApiIngress = (req, res, next) => {
     try {
-        const allowedMethods = new Set(['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS']);
+        const allowedMethods = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']);
 
         if (!allowedMethods.has(req.method)) {
             throw new AppError(405, 'Method not allowed.');
@@ -38,7 +38,7 @@ const validateApiIngress = (req, res, next) => {
         const contentLength = parseContentLength(req.headers['content-length']);
         const isChunked = typeof req.headers['transfer-encoding'] === 'string';
         const expectsJsonBody =
-            req.method === 'POST' || req.method === 'PATCH' || req.method === 'DELETE';
+            req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH' || req.method === 'DELETE';
         const hasBody = expectsJsonBody && (contentLength > 0 || isChunked);
 
         if (hasBody) {

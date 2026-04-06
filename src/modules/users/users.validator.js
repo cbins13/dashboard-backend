@@ -22,4 +22,8 @@ const updateUserSchema = Joi.object({
         'object.min': 'At least one field must be provided.',
     });
 
-module.exports = { createUserSchema, updateUserSchema };
+const assignRoleSchema = Joi.object({
+    roleId: Joi.number().integer().positive().required(),
+});
+
+module.exports = { createUserSchema, updateUserSchema, assignRoleSchema };

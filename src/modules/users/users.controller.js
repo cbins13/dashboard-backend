@@ -33,4 +33,22 @@ const deleteUser = asyncHandler(async (req, res) => {
     res.status(204).end();
 });
 
-module.exports = { getUsers, getUser, createUser, updateUser, deleteUser };
+const assignRole = asyncHandler(async (req, res) => {
+    const user = await usersService.assignRole(
+        req.app.locals.db.sequelize,
+        req.params.userId,
+        req.body.roleId
+    );
+    success(res, user);
+});
+
+const revokeRole = asyncHandler(async (req, res) => {
+    await usersService.revokeRole(
+        req.app.locals.db.sequelize,
+        req.params.userId,
+        req.params.roleId
+    );
+    res.status(204).end();
+});
+
+module.exports = { getUsers, getUser, createUser, updateUser, deleteUser, assignRole, revokeRole };

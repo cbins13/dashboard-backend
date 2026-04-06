@@ -4,7 +4,7 @@ const { Router } = require('express');
 const usersController = require('./users.controller');
 const { requireAccessCategory } = require('../../middleware/authorizeAccess');
 const validate = require('../../middleware/validate');
-const { createUserSchema, updateUserSchema } = require('./users.validator');
+const { createUserSchema, updateUserSchema, assignRoleSchema } = require('./users.validator');
 
 const router = Router();
 
@@ -15,5 +15,7 @@ router.get('/:userId', requireAccessCategory('USER_MANAGEMENT'), usersController
 router.post('/', requireAccessCategory('USER_MANAGEMENT'), validate(createUserSchema), usersController.createUser);
 router.patch('/:userId', requireAccessCategory('USER_MANAGEMENT'), validate(updateUserSchema), usersController.updateUser);
 router.delete('/:userId', requireAccessCategory('USER_MANAGEMENT'), usersController.deleteUser);
+router.post('/:userId/roles', requireAccessCategory('USER_MANAGEMENT'), validate(assignRoleSchema), usersController.assignRole);
+router.delete('/:userId/roles/:roleId', requireAccessCategory('USER_MANAGEMENT'), usersController.revokeRole);
 
 module.exports = router;

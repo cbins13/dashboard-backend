@@ -48,6 +48,15 @@ const revokeModule = asyncHandler(async (req, res) => {
     res.status(204).end();
 });
 
+const syncModules = asyncHandler(async (req, res) => {
+    const role = await rolesService.syncModules(
+        req.app.locals.db.sequelize,
+        req.params.roleId,
+        req.body.modules
+    );
+    success(res, role);
+});
+
 module.exports = {
     getRoles,
     getRole,
@@ -56,4 +65,5 @@ module.exports = {
     deleteRole,
     assignModule,
     revokeModule,
+    syncModules,
 };

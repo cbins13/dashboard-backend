@@ -19,7 +19,7 @@ const defineRoleModule = (sequelize, DataTypes) => {
                 field: 'MODULE_ID',
             },
             ctrl: {
-                type: DataTypes.STRING(20),
+                type: DataTypes.STRING(100),
                 allowNull: false,
                 defaultValue: 'VIEW',
                 field: 'CTRL',

@@ -33,4 +33,23 @@ const deleteModule = asyncHandler(async (req, res) => {
     res.status(204).end();
 });
 
-module.exports = { getCategories, getCategory, createModule, updateModule, deleteModule };
+const createCategory = asyncHandler(async (req, res) => {
+    const category = await modulesService.createCategory(req.app.locals.db.sequelize, req.body);
+    success(res, category, 201);
+});
+
+const updateCategory = asyncHandler(async (req, res) => {
+    const category = await modulesService.updateCategory(
+        req.app.locals.db.sequelize,
+        req.params.categoryId,
+        req.body
+    );
+    success(res, category);
+});
+
+const deleteCategory = asyncHandler(async (req, res) => {
+    await modulesService.removeCategory(req.app.locals.db.sequelize, req.params.categoryId);
+    res.status(204).end();
+});
+
+module.exports = { getCategories, getCategory, createModule, updateModule, deleteModule, createCategory, updateCategory, deleteCategory };

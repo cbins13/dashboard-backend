@@ -21,6 +21,7 @@ const safeCategory = (category) => {
         code: plain.code,
         name: plain.name,
         sortOrder: plain.sortOrder,
+        status: plain.status,
         modules: (plain.modules || []).map(safeModule),
     };
 };
@@ -53,18 +54,22 @@ const create = async (sequelize, categoryId, data) => {
         throw new AppError(404, 'Module category not found.');
     }
 
+    const now = new Date();
     const module = await modulesRepository.createModule(sequelize, {
         ...data,
         moduleCategoryId: categoryId,
         route: data.route || null,
         status: data.status || 'ACTIVE',
+        createdon: now,
+        updatedon: now,
     });
 
     return safeModule(module);
 };
 
 const update = async (sequelize, moduleId, data) => {
-    const module = await modulesRepository.updateModule(sequelize, moduleId, data);
+    const updated = { ...data, updatedon: new Date() };
+    const module = await modulesRepository.updateModule(sequelize, moduleId, updated);
 
     if (!module) {
         throw new AppError(404, 'Module not found.');
@@ -81,4 +86,43 @@ const remove = async (sequelize, moduleId) => {
     }
 };
 
-module.exports = { getAll, getById, create, update, remove };
+const createCategory = async (sequelize, data) => {
+    const existing = await modulesRepository.findCategoryByCode(sequelize, data.code);
+
+    if (existing) {
+        throw new AppError(409, 'Module category code already exists.');
+    }
+
+    const now = new Date();
+    const category = await modulesRepository.createCategory(sequelize, {
+        code: data.code,
+        name: data.name,
+        sortOrder: data.sortOrder ?? 1,
+        status: data.status ?? 'ACTIVE',
+        createdon: now,
+        updatedon: now,
+    });
+
+    return safeCategory(category);
+};
+
+const updateCategory = async (sequelize, categoryId, data) => {
+    const updated = { ...data, updatedon: new Date() };
+    const category = await modulesRepository.updateCategory(sequelize, categoryId, updated);
+
+    if (!category) {
+        throw new AppError(404, 'Module category not found.');
+    }
+
+    return safeCategory(category);
+};
+
+const removeCategory = async (sequelize, categoryId) => {
+    const deleted = await modulesRepository.removeCategory(sequelize, categoryId);
+
+    if (deleted === 0) {
+        throw new AppError(404, 'Module category not found.');
+    }
+};
+
+module.exports = { getAll, getById, create, update, remove, createCategory, updateCategory, removeCategory };
