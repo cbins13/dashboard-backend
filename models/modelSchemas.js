@@ -1,14 +1,14 @@
 const { resolveSchema } = require('../db/schemaContext');
 
 const modelSchemas = {
-    Person: 'CHRISTIAN2',
-    User: 'CHRISTIAN2',
-    Users: 'CHRISTIAN2',
-    Role: 'CHRISTIAN2',
-    Module: 'CHRISTIAN2',
-    ModuleCategory: 'CHRISTIAN2',
-    UserRole: 'CHRISTIAN2',
-    RoleModule: 'CHRISTIAN2',
+    Person: process.env.ORACLE_DEFAULT_SCHEMA,
+    User: process.env.ORACLE_DEFAULT_SCHEMA,
+    Users: process.env.ORACLE_DEFAULT_SCHEMA,
+    Role: process.env.ORACLE_DEFAULT_SCHEMA,
+    Module: process.env.ORACLE_DEFAULT_SCHEMA,
+    ModuleCategory: process.env.ORACLE_DEFAULT_SCHEMA,
+    UserRole: process.env.ORACLE_DEFAULT_SCHEMA,
+    RoleModule: process.env.ORACLE_DEFAULT_SCHEMA,
 };
 
 const getModelSchema = (modelName) => {

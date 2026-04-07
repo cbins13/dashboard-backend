@@ -7,6 +7,7 @@ const defineModule = require('./Module');
 const defineModuleCategory = require('./ModuleCategory');
 const defineUserRole = require('./UserRole');
 const defineRoleModule = require('./RoleModule');
+const definePerson = require('./Person');
 
 const initializeModels = (sequelize) => {
     const models = {
@@ -16,6 +17,7 @@ const initializeModels = (sequelize) => {
         ModuleCategory: defineModuleCategory(sequelize, DataTypes),
         UserRole: defineUserRole(sequelize, DataTypes),
         RoleModule: defineRoleModule(sequelize, DataTypes),
+        Person: definePerson(sequelize, DataTypes),
     };
 
     const { User, Role, Module, ModuleCategory, UserRole, RoleModule } = models;

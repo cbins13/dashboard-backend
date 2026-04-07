@@ -8,6 +8,7 @@ const authRouter = require('../modules/auth/auth.routes');
 const usersRouter = require('../modules/users/users.routes');
 const rolesRouter = require('../modules/roles/roles.routes');
 const moduleCatalogRouter = require('../modules/modules/modules.routes');
+const personsRouter = require('../modules/persons/persons.routes');
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/auth', authRouter);
 router.use('/users', authenticate, userRateLimiter, csrfProtection, usersRouter);
 router.use('/roles', authenticate, userRateLimiter, csrfProtection, rolesRouter);
 router.use('/modules', authenticate, userRateLimiter, csrfProtection, moduleCatalogRouter);
+router.use('/persons', authenticate, userRateLimiter, csrfProtection, personsRouter);
 
 module.exports = router;
