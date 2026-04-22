@@ -5,6 +5,21 @@ const getSchemaPrefix = () => {
     return schema ? `${schema}.` : '';
 };
 
+const runIgnoreOracleError = async (queryInterface, sql, ignoredCodes) => {
+    const ignoreList = ignoredCodes.join(', ');
+
+    await queryInterface.sequelize.query(`
+        BEGIN
+            EXECUTE IMMEDIATE q'~${sql}~';
+        EXCEPTION
+            WHEN OTHERS THEN
+                IF SQLCODE NOT IN (${ignoreList}) THEN
+                    RAISE;
+                END IF;
+        END;
+    `);
+};
+
 module.exports = {
     name: '008-seed-user-management-module',
     up: async ({ queryInterface }) => {
@@ -53,22 +68,34 @@ module.exports = {
     down: async ({ queryInterface }) => {
         const schemaPrefix = getSchemaPrefix();
 
-        await queryInterface.sequelize.query(`
+        await runIgnoreOracleError(
+            queryInterface,
+            `
             DELETE FROM ${schemaPrefix}ROLE_MODULE
             WHERE MODULE_ID IN (
                 SELECT ID FROM ${schemaPrefix}MODULE WHERE CODE = 'USER_MANAGEMENT'
             )
-        `);
+        `,
+            [-942]
+        );
 
-        await queryInterface.sequelize.query(`
+        await runIgnoreOracleError(
+            queryInterface,
+            `
             DELETE FROM ${schemaPrefix}MODULE_CATEGORY
             WHERE MODULE_ID IN (
                 SELECT ID FROM ${schemaPrefix}MODULE WHERE CODE = 'USER_MANAGEMENT'
             )
-        `);
+        `,
+            [-942]
+        );
 
-        await queryInterface.sequelize.query(`
+        await runIgnoreOracleError(
+            queryInterface,
+            `
             DELETE FROM ${schemaPrefix}MODULE WHERE CODE = 'USER_MANAGEMENT'
-        `);
+        `,
+            [-942]
+        );
     },
 };

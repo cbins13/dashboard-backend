@@ -7,53 +7,81 @@ const getUsersTableReference = () => {
     };
 };
 
+const getOracleErrorCode = (error) => {
+    const match = error?.message?.match(/ORA-(\d+)/i);
+    return match ? Number(match[1]) : null;
+};
+
+const shouldIgnoreOracleError = (error, ignoreCodes) => {
+    const code = getOracleErrorCode(error);
+    return code ? ignoreCodes.includes(code) : false;
+};
+
+const runQueryIgnoringOracleErrors = async (queryInterface, sql, ignoreCodes) => {
+    try {
+        await queryInterface.sequelize.query(sql);
+    } catch (error) {
+        if (!shouldIgnoreOracleError(error, ignoreCodes)) {
+            throw error;
+        }
+    }
+};
+
 module.exports = {
     name: '002-create-users-table',
     up: async ({ queryInterface, Sequelize }) => {
         const { schema } = getUsersTableReference();
 
-        await queryInterface.sequelize.query(
-            'CREATE SEQUENCE users_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE'
+        await runQueryIgnoringOracleErrors(
+            queryInterface,
+            'CREATE SEQUENCE users_seq START WITH 1 INCREMENT BY 1 NOCACHE NOCYCLE',
+            [955]
         );
 
-        await queryInterface.createTable(getUsersTableReference(), {
-            ID: {
-                type: Sequelize.NUMBER,
-                primaryKey: true,
-                allowNull: false,
-            },
-            USERNAME: {
-                type: Sequelize.STRING(255),
-                allowNull: false,
-                unique: true,
-            },
-            PASSWORD: {
-                type: Sequelize.STRING(255),
-                allowNull: false,
-            },
-            DISPLAYNAME: {
-                type: Sequelize.STRING(255),
-                allowNull: false,
-            },
-            USERSTATUS: {
-                type: Sequelize.STRING(20),
-                allowNull: false,
-                defaultValue: 'ACTIVE',
-            },
-            ARCHIVED: {
-                type: Sequelize.INTEGER,
-                allowNull: false,
-                defaultValue: 0,
-            },
-            CREATEDON: {
-                type: Sequelize.DATE,
-                allowNull: false,
-            },
-            UPDATEDON: {
-                type: Sequelize.DATE,
-                allowNull: false,
-            },
-        });
+        try {
+            await queryInterface.createTable(getUsersTableReference(), {
+                ID: {
+                    type: Sequelize.NUMBER,
+                    primaryKey: true,
+                    allowNull: false,
+                },
+                USERNAME: {
+                    type: Sequelize.STRING(255),
+                    allowNull: false,
+                    unique: true,
+                },
+                PASSWORD: {
+                    type: Sequelize.STRING(255),
+                    allowNull: false,
+                },
+                DISPLAYNAME: {
+                    type: Sequelize.STRING(255),
+                    allowNull: false,
+                },
+                USERSTATUS: {
+                    type: Sequelize.STRING(20),
+                    allowNull: false,
+                    defaultValue: 'ACTIVE',
+                },
+                ARCHIVED: {
+                    type: Sequelize.INTEGER,
+                    allowNull: false,
+                    defaultValue: 0,
+                },
+                CREATEDON: {
+                    type: Sequelize.DATE,
+                    allowNull: false,
+                },
+                UPDATEDON: {
+                    type: Sequelize.DATE,
+                    allowNull: false,
+                },
+            });
+        } catch (error) {
+            if (!shouldIgnoreOracleError(error, [955])) {
+                throw error;
+            }
+        }
 
         const tableRef = schema ? `${schema}.USERS` : 'USERS';
 
@@ -82,20 +110,40 @@ module.exports = {
             END;
         `);
 
-        await queryInterface.sequelize.query(`
+        await runQueryIgnoringOracleErrors(
+            queryInterface,
+            `
             ALTER TABLE ${tableRef}
             ADD CONSTRAINT chk_users_status CHECK (USERSTATUS IN ('ACTIVE', 'INACTIVE'))
-        `);
+        `,
+            [2264]
+        );
 
-        await queryInterface.sequelize.query(`
+        await runQueryIgnoringOracleErrors(
+            queryInterface,
+            `
             ALTER TABLE ${tableRef}
             ADD CONSTRAINT chk_users_archived CHECK (ARCHIVED IN (0, 1))
-        `);
+        `,
+            [2264]
+        );
     },
     down: async ({ queryInterface }) => {
-        await queryInterface.sequelize.query(`DROP TRIGGER trg_users_timestamps`);
-        await queryInterface.sequelize.query(`DROP TRIGGER trg_users_id`);
+        await runQueryIgnoringOracleErrors(
+            queryInterface,
+            `DROP TRIGGER trg_users_timestamps`,
+            [4080]
+        );
+        await runQueryIgnoringOracleErrors(
+            queryInterface,
+            `DROP TRIGGER trg_users_id`,
+            [4080]
+        );
         await queryInterface.dropTable(getUsersTableReference());
-        await queryInterface.sequelize.query(`DROP SEQUENCE users_seq`);
+        await runQueryIgnoringOracleErrors(
+            queryInterface,
+            `DROP SEQUENCE users_seq`,
+            [2289]
+        );
     },
 };
