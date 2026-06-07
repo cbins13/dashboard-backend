@@ -66,6 +66,8 @@ const create = async (sequelize, data) => {
 
 const update = async (sequelize, userId, data) => {
     const updateData = { ...data, updatedon: new Date() };
+    const { roleId } = updateData;
+    delete updateData.roleId;
 
     if (updateData.username) {
         const existing = await usersRepository.findByUsername(sequelize, updateData.username);
@@ -83,7 +85,18 @@ const update = async (sequelize, userId, data) => {
 
     if (!user) throw new AppError(404, 'User not found.');
 
-    return safeUser(user);
+    if (roleId) {
+        const { Role } = sequelize.models;
+        const role = await Role.findByPk(roleId);
+
+        if (!role) {
+            throw new AppError(404, 'Role not found.');
+        }
+
+        await usersRepository.assignRole(sequelize, userId, roleId);
+    }
+
+    return getById(sequelize, userId);
 };
 
 const remove = async (sequelize, userId) => {

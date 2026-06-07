@@ -1,5 +1,12 @@
 'use strict';
 
+const { getModelSchema } = require('../../../models/modelSchemas');
+
+const qualifyTable = (modelName, tableName) => {
+    const schema = getModelSchema(modelName);
+    return schema ? `${schema}.${tableName}` : tableName;
+};
+
 const buildUserInclude = (sequelize, includeRoles = false) => {
     if (!includeRoles) {
         return undefined;
@@ -59,7 +66,7 @@ const remove = async (sequelize, userId) => {
 };
 
 const assignRole = async (sequelize, userId, roleId) => {
-    const { User, Role, UserRole } = sequelize.models;
+    const { User, Role } = sequelize.models;
     const user = await User.findByPk(userId);
     const role = await Role.findByPk(roleId);
 
@@ -67,20 +74,27 @@ const assignRole = async (sequelize, userId, roleId) => {
         return null;
     }
 
-    const existingAssignment = await UserRole.findOne({
-        where: {
-            userId,
-            roleId,
-        },
-    });
+    const userRoleTable = qualifyTable('UserRole', 'USER_ROLE');
+    const [existingAssignmentRows] = await sequelize.query(
+        `SELECT COUNT(1) AS ASSIGNMENT_COUNT
+         FROM ${userRoleTable}
+         WHERE USER_ID = :userId AND ROLE_ID = :roleId`,
+        { replacements: { userId, roleId } }
+    );
 
-    if (existingAssignment) {
-        return existingAssignment;
+    const existingAssignmentCount = Number(existingAssignmentRows?.[0]?.ASSIGNMENT_COUNT || 0);
+
+    if (existingAssignmentCount > 0) {
+        return { userId, roleId, existed: true };
     }
 
-    const now = new Date();
+    await sequelize.query(
+        `INSERT INTO ${userRoleTable} (USER_ID, ROLE_ID, CREATEDON, UPDATEDON)
+         VALUES (:userId, :roleId, SYSTIMESTAMP, SYSTIMESTAMP)`,
+        { replacements: { userId, roleId } }
+    );
 
-    return UserRole.create({ userId, roleId, createdon: now, updatedon: now });
+    return { userId, roleId, existed: false };
 };
 
 const revokeRole = async (sequelize, userId, roleId) => {

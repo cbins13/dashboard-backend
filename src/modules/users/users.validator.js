@@ -16,6 +16,7 @@ const updateUserSchema = Joi.object({
     displayname: Joi.string().trim().min(1).max(255),
     userstatus: Joi.string().valid('ACTIVE', 'INACTIVE'),
     archived: Joi.number().valid(0, 1),
+    roleId: Joi.number().integer().positive(),
 })
     .min(1)
     .messages({

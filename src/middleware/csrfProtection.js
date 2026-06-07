@@ -10,11 +10,16 @@ const generateCsrfToken = (sessionId) => {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = Date.now() + securityPolicy.token.csrfTtlMs;
 
-    csrfStore.set(sessionId, { token, expiresAt });
+    const existingEntry = csrfStore.get(sessionId);
+    csrfStore.set(sessionId, {
+        token,
+        previousToken: existingEntry?.token || null,
+        expiresAt,
+    });
     return token;
 };
 
-const consumeCsrfToken = (sessionId, providedToken) => {
+const validateCsrfToken = (sessionId, providedToken) => {
     const entry = csrfStore.get(sessionId);
 
     if (!entry || entry.expiresAt < Date.now()) {
@@ -22,11 +27,13 @@ const consumeCsrfToken = (sessionId, providedToken) => {
         return false;
     }
 
-    if (entry.token !== providedToken) {
+    const matchesCurrent = entry.token === providedToken;
+    const matchesPrevious = entry.previousToken === providedToken;
+
+    if (!matchesCurrent && !matchesPrevious) {
         return false;
     }
 
-    csrfStore.delete(sessionId);
     return true;
 };
 
@@ -49,7 +56,7 @@ const csrfProtection = (req, res, next) => {
             throw new AppError(400, 'Missing CSRF token or session context.');
         }
 
-        if (!consumeCsrfToken(String(sessionId), String(csrfToken))) {
+        if (!validateCsrfToken(String(sessionId), String(csrfToken))) {
             throw new AppError(403, 'Invalid CSRF token.');
         }
 
